@@ -7,52 +7,59 @@ import java.io.*;
 
 public class SerializedBuffer
 {
-  private ByteArrayOutputStream outputStream_ = new ByteArrayOutputStream();
-  private ByteArrayInputStream inputStream_ = null;
+  private ByteIOStream stream_;
   private byte[] inputBuffer_ = null;
 
   public SerializedBuffer()
   {
-    // nothing to see here!
+    stream_ = new ByteIOStream();
   }
 
   public SerializedBuffer(byte[] inputData)
   {
     inputBuffer_ = inputData.clone();
-    inputStream_ = new ByteArrayInputStream(inputBuffer_);
+    stream_ = new ByteIOStream(inputBuffer_);
   }
 
-  public SerializedBuffer Write(byte[] data)
+  public SerializedBuffer write(byte[] data)
+    throws IOException
   {
-    useOutput();
     if (data != null && data.length > 0)
     {
       writeLEB128Int(data.length);
-      outputStream_.write(data, 0, data.length);
+      stream_.write(data);
     }
 
     return this;
   }
 
-  public SerializedBuffer Write(String s)
+  // writes a string's bytes to the buffer prefixed with the number of bytes
+  // that make up the string
+  public SerializedBuffer write(String s)
+    throws IOException
   {
-    useOutput();
     if (s != null && s.length() > 0)
     {
       byte[] stringBytes = s.getBytes();
-      Write(stringBytes);
+      write(stringBytes);
     }
 
     return this;
   }
 
-  public byte[] ReadBytes()
+  public SerializedBuffer write(int value)
+    throws IOException
+  {
+    writeLEB128Int(value);
+    return this;
+  }
+
+  public byte[] readBytes()
   {
     byte[] result;
     int byteCount;
     int bytesRead = 0;
 
-    useInput();
     try
     {
       byteCount = readLEB128Int();
@@ -66,17 +73,16 @@ public class SerializedBuffer
     result = new byte[byteCount];
     while (bytesRead < byteCount)
     {
-      bytesRead += inputStream_.read(result, bytesRead,
-        byteCount - bytesRead);
+      bytesRead += stream_.read(result, bytesRead, byteCount - bytesRead);
     }
 
     return result;
   }
 
-  public String ReadString()
+  public String readString()
   {
     String result;
-    byte[] stringBytes = ReadBytes();
+    byte[] stringBytes = readBytes();
     if (stringBytes == null)
     {
       return "";
@@ -86,35 +92,18 @@ public class SerializedBuffer
     return result;
   }
 
+  public int readInt() throws NumberFormatException
+  {
+    return readLEB128Int();
+  }
+
   public byte[] toByteArray()
   {
-    return outputStream_.toByteArray();
+    return stream_.toByteArray();
   }
 
-  private void useOutput()
+  private void writeLEB128Int(int value) throws IOException
   {
-    if (inputBuffer_ != null && inputBuffer_.length > 0)
-    {
-      outputStream_.reset();
-      outputStream_.write(inputBuffer_, 0, inputBuffer_.length);
-      inputBuffer_ = null;
-    }
-  }
-
-  private void useInput()
-  {
-    if (outputStream_.size() > 0)
-    {
-      inputBuffer_ = outputStream_.toByteArray();
-      inputStream_ = new ByteArrayInputStream(inputBuffer_);
-      outputStream_.reset();
-    }
-  }
-
-  private void writeLEB128Int(int value)
-  {
-    useOutput();
-
     // A brief explanation of LEB-128 encoding:
     //
     // Values are stored as individual bytes. The actual data of each byte is
@@ -134,7 +123,7 @@ public class SerializedBuffer
     // To encode 5432 into LEB-128:
     //
     //  1. Since 5432 is >= 128, we know we'll need to use a second byte, so
-    //     write the rightmost 7 bits and set the leftmost bit to 1:
+    //     writeByte the rightmost 7 bits and set the leftmost bit to 1:
     //
     //        5432 AND 0111111b (0x7f) =  56 (00111000b) (0x38)
     //          56 AND 1000000b (0x80) = 184 (10111000b) (0xb8)
@@ -155,16 +144,15 @@ public class SerializedBuffer
     {
       // use bit-masking when writing the value to ensure only the rightmost 7
       // bits are written while manually setting the leftmost bit.
-      outputStream_.write((byte)((value & 0x7f) | 0x80));
+      stream_.writeByte((byte)((value & 0x7f) | 0x80));
       value >>>= 7;
     }
 
-    outputStream_.write((byte)(value & 0xff));
+    stream_.writeByte((byte)(value & 0xff));
   }
 
   private int readLEB128Int() throws NumberFormatException
   {
-    useInput();
     byte currentByte;
     int shiftCount = 0;
     int result = 0;
@@ -178,7 +166,7 @@ public class SerializedBuffer
         throw new NumberFormatException();
       }
 
-      currentByte = (byte) inputStream_.read();
+      currentByte = stream_.readByte();
       result |= (currentByte & 0x7f) << shiftCount;
       shiftCount += 7;
     } while ((currentByte & 0x80) != 0);
