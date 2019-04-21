@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 
 public class ConfigurationDialog extends JDialog
@@ -16,6 +17,8 @@ public class ConfigurationDialog extends JDialog
   private JTextField userNameText;
   private JTextField groupAddressText;
   private JCheckBox broadcastCheckbox;
+  private JCheckBox bindNetInterfaceChecbox;
+  private JComboBox<NetworkInterface> netInterfaceText;
   private JTextField portText;
   private JButton okButton;
   private JButton cancelButton;
@@ -64,8 +67,12 @@ public class ConfigurationDialog extends JDialog
     constraints.gridy++;
     contentPanel.add(new JLabel("Multicast address: "), constraints);
 
+    // Interface label
+    constraints.gridy += 3;   // skip two rows for checkboxes
+    contentPanel.add(new JLabel("Interface: "), constraints);
+
     // Port label
-    constraints.gridy += 2;
+    constraints.gridy++;
     contentPanel.add(new JLabel("Port: "), constraints);
 
     // User name text box
@@ -96,6 +103,28 @@ public class ConfigurationDialog extends JDialog
         groupAddressText.setEnabled(e.getStateChange() != ItemEvent.SELECTED);
       }
     });
+
+    // Bind network interface checkbox
+    constraints.gridy++;
+    contentPanel.add((bindNetInterfaceChecbox = new JCheckBox()), constraints);
+    bindNetInterfaceChecbox.setText("Bind to specific network interface");
+    bindNetInterfaceChecbox.addItemListener(new ItemListener()
+    {
+      @Override
+      public void itemStateChanged(ItemEvent e)
+      {
+        netInterfaceText.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+      }
+    });
+
+    // Interface combo box
+    constraints.gridy++;
+    contentPanel.add((netInterfaceText = new JComboBox<>()), constraints);
+    netInterfaceText.setEnabled(false);
+    for (NetworkInterface netInt : ChatClient.getValidInterfaces())
+    {
+      netInterfaceText.addItem(netInt);
+    }
 
     // Port text box
     constraints.gridy++;
@@ -134,6 +163,16 @@ public class ConfigurationDialog extends JDialog
           {
             configuration_.setAddress(Configuration.DEFAULT_ADDRESS);
           }
+        }
+
+        if (bindNetInterfaceChecbox.isSelected())
+        {
+          configuration_.setNetworkInterface(
+            (NetworkInterface)netInterfaceText.getSelectedItem());
+        }
+        else
+        {
+          configuration_.setNetworkInterface(null);
         }
 
         setVisible(false);

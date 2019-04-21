@@ -16,26 +16,20 @@ public class PunyChatTesting
     //TestDecryption();
     //TestDatagrams();
     //TestChat();
-    TestConfigDialog();
+    //TestConfigDialog();
+    TestConfigInput();
+    //TestChatUI();
   }
 
   public static void TestListInterfaces()
   {
-    try
+    List<NetworkInterface> netInts = ChatClient.getValidInterfaces();
+    for (NetworkInterface netInt : netInts)
     {
-      List<NetworkInterface> netInts = ChatClient.getValidInterfaces();
-      for (NetworkInterface netInt : netInts)
+      for (InetAddress netAddr : Collections.list(netInt.getInetAddresses()))
       {
-        for (InetAddress netAddr : Collections.list(netInt.getInetAddresses()))
-        {
-          System.out.println(netInt.getDisplayName() + ": " + netAddr.toString());
-        }
+        System.out.println(netInt.getDisplayName() + ": " + netAddr.toString());
       }
-    }
-    catch (SocketException sockEx)
-    {
-      System.err.println("Couldn't read interfaces: " + sockEx.getMessage());
-      sockEx.printStackTrace();
     }
   }
 
@@ -266,12 +260,29 @@ public class PunyChatTesting
     }
     else
     {
-      System.out.println(String.format("User name: %s\nAddress: %s\nPort: %d",
-        dlg.getConfiguration().getUserName(),
-        dlg.getConfiguration().getAddress(),
-        dlg.getConfiguration().getPort()));
+      //System.out.println(String.format("User name: %s\nAddress: %s\nPort: %d",
+      //  dlg.getConfiguration().getUserName(),
+      //  dlg.getConfiguration().getAddress(),
+      //  dlg.getConfiguration().getPort()));
+      System.out.println(dlg.getConfiguration().toString());
     }
 
     dlg.dispose();
+  }
+
+  public static void TestConfigInput()
+  {
+    Configuration config = Configuration.fromStandardInput();
+    System.out.println("Configuration:");
+    System.out.println(config);
+  }
+
+  public static void TestChatUI()
+  {
+    ChatUIFrame chatUI = new ChatUIFrame();
+    chatUI.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    chatUI.setLocationRelativeTo(null);
+    chatUI.pack();
+    chatUI.setVisible(true);
   }
 }

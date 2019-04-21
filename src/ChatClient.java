@@ -1,11 +1,13 @@
 //!
-//! @file ChatClient.java
-//! @author Jonathan Smith
+//! @title        Puny Chat chat client
+//! @file         ChatClient.java
+//! @author       Jonathan Smith (CIS106-HYB2)
+//! @description  Acts as a handler for inbound and outbound Puny Chat
+//!               socket communications.
 //!
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.net.Socket;
 import java.net.SocketException;
 import java.util.*;
 
@@ -14,18 +16,34 @@ public class ChatClient
   private HashMap<byte[], String> channelKeys_ = new HashMap<>();
 
   public static List<NetworkInterface> getValidInterfaces()
-    throws SocketException
   {
     List<NetworkInterface> validInterfaces = new ArrayList<>();
-    Enumeration<NetworkInterface> netInterfaces =
-      NetworkInterface.getNetworkInterfaces();
+    Enumeration<NetworkInterface> netInterfaces;
+    try
+    {
+      netInterfaces = NetworkInterface.getNetworkInterfaces();
+    }
+    catch (SocketException ex)
+    {
+      // Can't get a list of interfaces, so return an empty list.
+      return validInterfaces;
+    }
+
     for (NetworkInterface netInt : Collections.list(netInterfaces))
     {
-      if (!netInt.isVirtual() && !netInt.isLoopback() &&
-        !netInt.isPointToPoint() && netInt.isUp())
+      try
       {
-        // It's a "real" interface and it's up; good to use
-        validInterfaces.add(netInt);
+        if (!netInt.isVirtual() && !netInt.isLoopback() &&
+          !netInt.isPointToPoint() && netInt.isUp())
+        {
+          // It's a "real" interface and it's up; good to use
+          validInterfaces.add(netInt);
+        }
+      }
+      catch (SocketException ex)
+      {
+        // Ignore the error; we probably don't want to use this interface.
+        ex.printStackTrace();
       }
     }
 
@@ -33,7 +51,6 @@ public class ChatClient
   }
 
   public static List<InetAddress> getValidHostAddresses()
-    throws SocketException
   {
     List<InetAddress> validAddresses = new ArrayList<>();
     List<NetworkInterface> netInts = ChatClient.getValidInterfaces();
@@ -52,7 +69,6 @@ public class ChatClient
   }
 
   public static List<InetAddress> getValidHostIPv4Addresses()
-    throws SocketException
   {
     List<InetAddress> validIPv4Addresses = new ArrayList<>();
     List<InetAddress> validAddresses = getValidHostAddresses();
@@ -68,7 +84,6 @@ public class ChatClient
   }
 
   public static InetAddress getDefaultAddress()
-    throws SocketException
   {
     List<NetworkInterface> netInts = ChatClient.getValidInterfaces();
     for (NetworkInterface netInt : netInts)
