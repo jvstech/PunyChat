@@ -17,8 +17,8 @@ public class PunyChatTesting
     //TestDatagrams();
     //TestChat();
     //TestConfigDialog();
-    TestConfigInput();
-    //TestChatUI();
+    //TestConfigInput();
+    TestChatUI();
   }
 
   public static void TestListInterfaces()
