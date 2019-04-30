@@ -5,22 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
-public class PunyChatTesting
+public class Tests
 {
-  public static void main(String[] args)
-  {
-    //TestListInterfaces();
-    //TestFirstValidInterface();
-    //TestEncryption();
-    //TestMemoryHash();
-    //TestDecryption();
-    //TestDatagrams();
-    //TestChat();
-    //TestConfigDialog();
-    //TestConfigInput();
-    TestChatUI();
-  }
-
   public static void TestListInterfaces()
   {
     List<NetworkInterface> netInts = ChatClient.getValidInterfaces();
@@ -277,8 +263,30 @@ public class PunyChatTesting
     System.out.println(config);
   }
 
+  public static void TestAddChannelDialog()
+  {
+    AddChannelDialog dlg = new AddChannelDialog();
+    dlg.pack();
+    dlg.setModal(true);
+    dlg.setVisible(true);
+    if (!dlg.wasCancelled())
+    {
+      System.out.println("Channel: " + dlg.getChannel());
+    }
+    else
+    {
+      System.out.println("Channel dialog was cancelled.");
+    }
+
+    dlg.dispose();
+  }
+
   public static void TestChatUI()
   {
+    Channel.tryFromName("c++");
+    Channel.tryFromName("programming");
+    Channel.tryFromName("java");
+    Channel.tryFromName("general");
     ChatUIFrame chatUI = new ChatUIFrame();
     chatUI.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     chatUI.setLocationRelativeTo(null);

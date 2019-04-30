@@ -6,14 +6,140 @@
 //!               socket communications.
 //!
 
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import java.io.IOException;
+import java.net.*;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidParameterSpecException;
 import java.util.*;
 
 public class ChatClient
 {
-  private HashMap<byte[], String> channelKeys_ = new HashMap<>();
+  private ChatReceiver receiver_ = null;
+  private ChatEntryReceived entryReceivedCallback_ = null;
+  private MulticastSocket receiverSocket_ = null;
+  private DatagramSocket senderSocket_ = null;
+  private InetAddress address_ = null;
+  private int port_ = 0;
+
+  public ChatEntryReceived getEntryReceivedCallback()
+  {
+    return entryReceivedCallback_;
+  }
+
+  public void setEntryReceivedCallback(ChatEntryReceived callback)
+  {
+    entryReceivedCallback_ = callback;
+    if (receiver_ != null)
+    {
+      receiver_.setCallback(entryReceivedCallback_);
+    }
+  }
+
+  public void configure(Configuration config)
+    throws IOException, InterruptedException
+  {
+    if (config == null)
+    {
+      return;
+    }
+
+    address_ = config.getAddress();
+    port_ = config.getPort();
+
+    // Configure the sender socket
+    if (senderSocket_ != null)
+    {
+      senderSocket_.close();
+      senderSocket_ = null;
+    }
+
+    senderSocket_ = new DatagramSocket();
+    if (config.isBroadcast())
+    {
+      senderSocket_.setBroadcast(true);
+    }
+
+    // Turn off the receiver
+    if (receiver_ != null)
+    {
+      if (receiver_.isRunning())
+      {
+        receiver_.requestStop();
+        receiver_.join();
+      }
+
+      receiver_ = null;
+    }
+
+    // Configure the receiver socket
+    if (receiverSocket_ != null && ! receiverSocket_.isClosed())
+    {
+      receiverSocket_.close();
+    }
+
+    receiverSocket_ = new MulticastSocket(port_);
+    if (config.isBoundToInterface())
+    {
+      receiverSocket_.setNetworkInterface(config.getNetworkInterface());
+    }
+
+    receiverSocket_.joinGroup(address_);
+
+    // Configure the receiver
+    receiver_ = new ChatReceiver(entryReceivedCallback_, receiverSocket_);
+    receiver_.start();
+  }
+
+  public void send(ChatEntry chatEntry)
+    throws IOException, NoSuchPaddingException, NoSuchAlgorithmException,
+    IllegalBlockSizeException, BadPaddingException, InvalidKeyException,
+    InvalidParameterSpecException
+  {
+    if (chatEntry == null)
+    {
+      return;
+    }
+
+    if (senderSocket_ == null)
+    {
+      senderSocket_ = new DatagramSocket();
+    }
+
+    byte[] buf = chatEntry.encrypt();
+    DatagramPacket packet = new DatagramPacket(buf, buf.length, address_,
+      port_);
+    senderSocket_.send(packet);
+  }
+
+  public void terminate()
+  {
+    if (senderSocket_ != null && !senderSocket_.isClosed())
+    {
+      senderSocket_.close();
+    }
+
+    senderSocket_ = null;
+
+    if (receiver_ != null && receiver_.isRunning())
+    {
+      receiver_.requestStop();
+      try
+      {
+        receiver_.join();
+      }
+      catch (InterruptedException ex)
+      {
+        // do nothing; we're terminating anyway
+      }
+    }
+
+    receiverSocket_.close();
+    receiverSocket_ = null;
+  }
 
   public static List<NetworkInterface> getValidInterfaces()
   {

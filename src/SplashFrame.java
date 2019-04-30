@@ -74,7 +74,7 @@ public class SplashFrame extends JDialog
     projectInfoScrollPane = new JScrollPane();
     projectInfoTextArea = new JTextArea();
 
-    // Configure the splash frame; make it so the application exits when the
+    // Configure the splash frame; make it so the frame is hidden when the
     // close button ('X') is pressed.
     setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
     setTitle("Puny Chat");

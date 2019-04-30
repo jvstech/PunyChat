@@ -47,6 +47,7 @@ public class ConfigurationDialog extends JDialog
     setBackground(new Color(60,63,65));
     setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
     setLayout(new GridBagLayout());
+    setLocationRelativeTo(null);
 
     GridBagConstraints rootConstraints = new GridBagConstraints();
     rootConstraints.gridx = 0;

@@ -3,6 +3,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ChatReceiver extends Thread
 {
@@ -16,7 +17,8 @@ public class ChatReceiver extends Thread
   private byte[] buffer_;
   private ChatEntryReceived callback_;
   private boolean running_ = false;
-  private boolean stopRequested_ = false;
+  private AtomicBoolean stopRequested_ = new AtomicBoolean(false);
+
 
   public ChatReceiver(ChatEntryReceived callback, DatagramSocket chatSocket,
     int bufferSize)
@@ -45,9 +47,14 @@ public class ChatReceiver extends Thread
     return running_;
   }
 
+  public void setCallback(ChatEntryReceived callback)
+  {
+    callback_ = callback;
+  }
+
   public void requestStop()
   {
-    stopRequested_ = true;
+    stopRequested_.set(true);
   }
 
   public void run()
@@ -85,9 +92,9 @@ public class ChatReceiver extends Thread
       }
       catch (SocketTimeoutException soToEx)
       {
-        if (stopRequested_)
+        if (stopRequested_.get())
         {
-          stopRequested_ = false;
+          stopRequested_.set(false);
           running_ = false;
           break;
         }

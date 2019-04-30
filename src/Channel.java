@@ -85,4 +85,33 @@ public class Channel
     byte[] key = CryptoUtil.getDerivedKey(password);
     return new Channel(name, hash, key);
   }
+
+  public static Channel tryFromName(String name)
+  {
+    try
+    {
+      return Channel.fromName(name);
+    }
+    catch (Exception ex)
+    {
+      return null;
+    }
+  }
+
+  public static Channel tryFromProtectedName(String name, String password)
+  {
+    try
+    {
+      return Channel.fromProtectedName(name, password);
+    }
+    catch (Exception ex)
+    {
+      return null;
+    }
+  }
+
+  public static Channel[] getAllChannels()
+  {
+    return Channels.values().toArray(new Channel[0]);
+  }
 }
