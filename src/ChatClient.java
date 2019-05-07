@@ -24,6 +24,7 @@ public class ChatClient
   private DatagramSocket senderSocket_ = null;
   private InetAddress address_ = null;
   private int port_ = 0;
+  private String userName_ = System.getProperty("user.name");
 
   public ChatEntryReceived getEntryReceivedCallback()
   {
@@ -47,6 +48,7 @@ public class ChatClient
       return;
     }
 
+    userName_ = config.getUserName();
     address_ = config.getAddress();
     port_ = config.getPort();
 
@@ -92,6 +94,16 @@ public class ChatClient
     // Configure the receiver
     receiver_ = new ChatReceiver(entryReceivedCallback_, receiverSocket_);
     receiver_.start();
+  }
+
+  public String getUserName()
+  {
+    return userName_;
+  }
+
+  public void setUserName(String userName)
+  {
+    userName_ = userName;
   }
 
   public void send(ChatEntry chatEntry)

@@ -287,7 +287,7 @@ public class Tests
     Channel.tryFromName("programming");
     Channel.tryFromName("java");
     Channel.tryFromName("general");
-    ChatUIFrame chatUI = new ChatUIFrame();
+    ChatUIFrame chatUI = new ChatUIFrame(new ChatClient());
     chatUI.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     chatUI.setLocationRelativeTo(null);
     chatUI.pack();

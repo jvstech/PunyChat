@@ -17,7 +17,7 @@ public class ConfigurationDialog extends JDialog
   private JTextField userNameText;
   private JTextField groupAddressText;
   private JCheckBox broadcastCheckbox;
-  private JCheckBox bindNetInterfaceChecbox;
+  private JCheckBox bindNetInterfaceCheckbox;
   private JComboBox<NetworkInterface> netInterfaceText;
   private JTextField portText;
   private JButton okButton;
@@ -107,9 +107,9 @@ public class ConfigurationDialog extends JDialog
 
     // Bind network interface checkbox
     constraints.gridy++;
-    contentPanel.add((bindNetInterfaceChecbox = new JCheckBox()), constraints);
-    bindNetInterfaceChecbox.setText("Bind to specific network interface");
-    bindNetInterfaceChecbox.addItemListener(new ItemListener()
+    contentPanel.add((bindNetInterfaceCheckbox = new JCheckBox()), constraints);
+    bindNetInterfaceCheckbox.setText("Bind to specific network interface");
+    bindNetInterfaceCheckbox.addItemListener(new ItemListener()
     {
       @Override
       public void itemStateChanged(ItemEvent e)
@@ -166,7 +166,7 @@ public class ConfigurationDialog extends JDialog
           }
         }
 
-        if (bindNetInterfaceChecbox.isSelected())
+        if (bindNetInterfaceCheckbox.isSelected())
         {
           configuration_.setNetworkInterface(
             (NetworkInterface)netInterfaceText.getSelectedItem());

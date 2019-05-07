@@ -6,7 +6,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+
+// I want to "upgrade" this to use GroupLayout, but I'm not sure I have enough
+// time.
 
 public class ChatUIFrame extends JFrame
 {
@@ -18,15 +20,81 @@ public class ChatUIFrame extends JFrame
   // property fields
   private HashMap<Channel, ArrayList<ChatMessage>> chatMessages_ =
     new HashMap<>();
+  private ChatClient client_ = null;
+  private Channel lastSelectedChannel_ = null;
 
-  public ChatUIFrame()
+  public ChatUIFrame(ChatClient chatClient)
   {
+    client_ = chatClient;
     initialize();
+    client_.setEntryReceivedCallback(new ChatEntryReceived()
+    {
+      @Override
+      public void received(ChatEntry entry)
+      {
+        if (SwingUtilities.isEventDispatchThread())
+        {
+          onChatEntryReceived(entry);
+        }
+        else
+        {
+          EventQueue.invokeLater(new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              onChatEntryReceived(entry);
+            }
+          });
+        }
+      }
+    });
   }
 
   public DefaultListModel<Channel> getChannelList()
   {
     return channelListModel;
+  }
+
+  private Channel getSelectedChannel()
+  {
+    if (channelList.isSelectionEmpty())
+    {
+      if (lastSelectedChannel_ != null &&
+        channelListModel.contains(lastSelectedChannel_))
+      {
+       channelList.setSelectedValue(lastSelectedChannel_, true);
+      }
+      else if (!channelListModel.isEmpty())
+      {
+        channelList.setSelectedIndex(0);
+        lastSelectedChannel_ = channelList.getSelectedValue();
+      }
+      else
+      {
+        // Can't do anything. No channels to select.
+        return null;
+      }
+    }
+
+    return channelList.getSelectedValue();
+  }
+
+  private Channel getLastSelectedChannel()
+  {
+    return lastSelectedChannel_;
+  }
+
+  private void onChatEntryReceived(ChatEntry entry)
+  {
+    ChatMessage message = entry.getMessage();
+    Channel channel = entry.getChannel();
+    chatMessages_.getOrDefault(channel, new ArrayList<>()).add(message);
+    if (getSelectedChannel() == channel)
+    {
+      messagesText.append(String.format("%s\n", message));
+      messagesText.setCaretPosition(messagesText.getDocument().getLength());
+    }
   }
 
   private void initialize()
@@ -74,10 +142,14 @@ public class ChatUIFrame extends JFrame
         {
           int idx = e.getFirstIndex();
           Channel channel = channelListModel.get(idx);
+          lastSelectedChannel_ = channel;
           StringBuilder sb = new StringBuilder();
-          for (ChatMessage message : chatMessages_.get(channel))
+          if (chatMessages_.containsKey(channel))
           {
-            sb.append(message.toString() + "\n");
+            for (ChatMessage message : chatMessages_.get(channel))
+            {
+              sb.append(message.toString() + "\n");
+            }
           }
 
           messagesText.setText(sb.toString());
@@ -115,10 +187,25 @@ public class ChatUIFrame extends JFrame
       chatPanel.add((messageText = new JTextField(80)), chatConstraints);
       messageText.addActionListener(new ActionListener()
       {
+        // Enter keypress handler
         @Override
         public void actionPerformed(ActionEvent e)
         {
+          Channel channel = getSelectedChannel();
+          ChatMessage message = new ChatMessage(client_.getUserName(),
+            messageText.getText());
+          ChatEntry chatEntry = new ChatEntry(channel, message);
+          try
+          {
+            client_.send(chatEntry);
+          }
+          catch (Exception ex)
+          {
+            System.err.println("Couldn't send message.");
+            ex.printStackTrace();
+          }
 
+          messageText.selectAll();
         }
       });
     }

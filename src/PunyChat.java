@@ -41,7 +41,7 @@ public class PunyChat implements Runnable
 
   public void showMainUI()
   {
-    chatUIFrame_ = new ChatUIFrame();
+    chatUIFrame_ = new ChatUIFrame(client_);
     chatUIFrame_.setLocationRelativeTo(null);
     chatUIFrame_.pack();
     WindowUtil.center(chatUIFrame_);
@@ -153,7 +153,6 @@ public class PunyChat implements Runnable
       {
         showError("Couldn't stop chat receiver", threadEx);
       }
-
     }
 
     dlg.dispose();
