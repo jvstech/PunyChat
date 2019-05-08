@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class Channel
@@ -42,6 +43,23 @@ public class Channel
   public String toString()
   {
     return name_;
+  }
+
+  @Override
+  public boolean equals(Object rhs)
+  {
+    if (!(rhs instanceof Channel))
+    {
+      return false;
+    }
+
+    return Arrays.equals(hash_, ((Channel) rhs).hash_);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Arrays.hashCode(hash_);
   }
 
   public static Channel find(byte[] channelHash)

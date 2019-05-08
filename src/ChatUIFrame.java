@@ -7,8 +7,8 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-// I want to "upgrade" this to use GroupLayout, but I'm not sure I have enough
-// time.
+// I want to "upgrade" this to use GroupLayout or JavaFX, but I don't have
+// enough time.
 
 public class ChatUIFrame extends JFrame
 {
@@ -17,6 +17,11 @@ public class ChatUIFrame extends JFrame
   private DefaultListModel<Channel> channelListModel = new DefaultListModel<>();
   private JTextArea messagesText;
   private JTextField messageText;
+  private JButton configButton;
+  private JButton addChannelButton;
+  // callbacks
+  private Runnable performConfiguration_ = null;
+  private Runnable performAddChannel_ = null;
   // property fields
   private HashMap<Channel, ArrayList<ChatMessage>> chatMessages_ =
     new HashMap<>();
@@ -56,6 +61,26 @@ public class ChatUIFrame extends JFrame
     return channelListModel;
   }
 
+  public Runnable getPerformConfigurationCallback()
+  {
+    return performConfiguration_;
+  }
+
+  public void setPerformConfigurationCallback(Runnable performConfiguration)
+  {
+    performConfiguration_ = performConfiguration;
+  }
+
+  public Runnable getPerformAddChannelCallback()
+  {
+    return performAddChannel_;
+  }
+
+  public void setPerformAddChannelCallback(Runnable performAddChannel)
+  {
+    performAddChannel_ = performAddChannel;
+  }
+
   private Channel getSelectedChannel()
   {
     if (channelList.isSelectionEmpty())
@@ -89,7 +114,12 @@ public class ChatUIFrame extends JFrame
   {
     ChatMessage message = entry.getMessage();
     Channel channel = entry.getChannel();
-    chatMessages_.getOrDefault(channel, new ArrayList<>()).add(message);
+    if (!chatMessages_.containsKey(channel))
+    {
+      chatMessages_.put(channel, new ArrayList<>());
+    }
+
+    chatMessages_.get(channel).add(message);
     if (getSelectedChannel() == channel)
     {
       messagesText.append(String.format("%s\n", message));
@@ -113,6 +143,34 @@ public class ChatUIFrame extends JFrame
       JPanel buttonPanel;
       add((buttonPanel = new JPanel()), rootConstraints);
       buttonPanel.setLayout(new FlowLayout());
+
+      // Configuration button
+      buttonPanel.add((configButton = new JButton("Configure")));
+      configButton.addActionListener(new ActionListener()
+      {
+        @Override
+        public void actionPerformed(ActionEvent e)
+        {
+          if (performConfiguration_ != null)
+          {
+            performConfiguration_.run();
+          }
+        }
+      });
+
+      // Add channel button
+      buttonPanel.add((addChannelButton = new JButton("Add Channel")));
+      addChannelButton.addActionListener(new ActionListener()
+      {
+        @Override
+        public void actionPerformed(ActionEvent e)
+        {
+          if (performAddChannel_ != null)
+          {
+            performAddChannel_.run();
+          }
+        }
+      });
 
       // Content panel (everything below the button panel)
       rootConstraints.gridy++;
@@ -140,8 +198,13 @@ public class ChatUIFrame extends JFrame
         @Override
         public void valueChanged(ListSelectionEvent e)
         {
-          int idx = e.getFirstIndex();
-          Channel channel = channelListModel.get(idx);
+          if (e.getValueIsAdjusting())
+          {
+            // Selected item has just started changing; don't do anything yet.
+            return;
+          }
+
+          Channel channel = channelList.getSelectedValue();
           lastSelectedChannel_ = channel;
           StringBuilder sb = new StringBuilder();
           if (chatMessages_.containsKey(channel))
@@ -174,7 +237,13 @@ public class ChatUIFrame extends JFrame
       chatConstraints.weightx = 1;
       chatConstraints.weighty = 1;
       chatConstraints.fill = GridBagConstraints.BOTH;
-      chatPanel.add((messagesText = new JTextArea(40, 80)), chatConstraints);
+      messagesText = new JTextArea(40, 80);
+      JScrollPane chatScrollPane = new JScrollPane(messagesText);
+      chatScrollPane.setHorizontalScrollBarPolicy(
+        JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+      chatScrollPane.setVerticalScrollBarPolicy(
+        JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+      chatPanel.add(chatScrollPane, chatConstraints);
       messagesText.setLineWrap(true);
       messagesText.setWrapStyleWord(true);
       messagesText.setEditable(false);

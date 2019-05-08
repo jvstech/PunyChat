@@ -97,6 +97,29 @@ public class PunyChat implements Runnable
       {
       }
     });
+
+    chatUIFrame_.setPerformConfigurationCallback(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        showConfigurationDialog();
+      }
+    });
+
+    chatUIFrame_.setPerformAddChannelCallback(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        Channel channel = showAddChannelDialog();
+        if (channel != null)
+        {
+          chatUIFrame_.getChannelList().addElement(channel);
+        }
+      }
+    });
+
     chatUIFrame_.setVisible(true);
   }
 
