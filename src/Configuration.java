@@ -6,6 +6,9 @@
 //!               operation of Puny Chat.
 //!
 
+import com.sun.org.apache.bcel.internal.classfile.Unknown;
+
+import javax.xml.bind.annotation.XmlElementDecl;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.UnknownHostException;
@@ -15,14 +18,22 @@ import java.util.Scanner;
 
 public class Configuration
 {
+  public enum CommunicationType
+  {
+    MULTICAST,
+    BROADCAST,
+    DIRECT
+  }
+
   public static final String DEFAULT_USERNAME = System.getProperty("user.name");
   public static final InetAddress DEFAULT_ADDRESS;
+  public static final InetAddress GLOBAL_LISTEN_ADDRESS;
   public static final InetAddress BROADCAST_ADDRESS;
   public static final int DEFAULT_PORT = 64247;
 
   private String userName_ = DEFAULT_USERNAME;
   private InetAddress address_ = DEFAULT_ADDRESS;
-  private boolean broadcast_ = false;
+  private CommunicationType communicationType_ = CommunicationType.MULTICAST;
   private boolean boundToInterface_ = false;
   private NetworkInterface networkInterface_ = null;
   private int port_ = DEFAULT_PORT;
@@ -40,10 +51,25 @@ public class Configuration
     }
     catch (UnknownHostException ex)
     {
+      ex.printStackTrace();
       tmp = InetAddress.getLoopbackAddress();
     }
 
     DEFAULT_ADDRESS = tmp;
+
+    try
+    {
+      // This is the "any" address (INADDR_ANY), which will listen on any
+      // interface.
+      tmp = InetAddress.getByName("0.0.0.0");
+    }
+    catch (UnknownHostException ex)
+    {
+      ex.printStackTrace();
+      tmp = InetAddress.getLoopbackAddress();
+    }
+
+    GLOBAL_LISTEN_ADDRESS = tmp;
 
     try
     {
@@ -52,6 +78,7 @@ public class Configuration
     }
     catch (UnknownHostException ex)
     {
+      ex.printStackTrace();
       tmp = InetAddress.getLoopbackAddress();
     }
 
@@ -96,11 +123,15 @@ public class Configuration
     // field to true to indicate this.
     if (Arrays.equals(address.getAddress(), BROADCAST_ADDRESS.getAddress()))
     {
-      broadcast_ = true;
+      setBroadcast();
+    }
+    else if (address.isMulticastAddress())
+    {
+      setMulticast(address);
     }
     else
     {
-      broadcast_ = false;
+      setDirect(address);
     }
 
     address_ = address;
@@ -108,30 +139,40 @@ public class Configuration
 
   public boolean isBroadcast()
   {
-    return broadcast_;
+    return (communicationType_ == CommunicationType.BROADCAST);
   }
 
-  public void setBroadcast(boolean broadcast)
+  public void setBroadcast()
   {
-    broadcast_ = broadcast;
-    if (broadcast_)
-    {
-      address_ = BROADCAST_ADDRESS;
-    }
-    else
-    {
-      // Reset the address to the default one if the current address is not
-      // a broadcast address.
-      if (Arrays.equals(address_.getAddress(), BROADCAST_ADDRESS.getAddress()))
-      {
-        address_ = DEFAULT_ADDRESS;
-      }
-    }
+    communicationType_ = CommunicationType.BROADCAST;
+    address_ = BROADCAST_ADDRESS;
+  }
+
+  public boolean isDirect()
+  {
+    return (communicationType_ == CommunicationType.DIRECT);
+  }
+
+  public void setDirect(InetAddress address)
+  {
+    communicationType_ = CommunicationType.DIRECT;
+    address_ = address;
   }
 
   public boolean isBoundToInterface()
   {
     return boundToInterface_;
+  }
+
+  public boolean isMulticast()
+  {
+    return (communicationType_ == CommunicationType.MULTICAST);
+  }
+
+  public void setMulticast(InetAddress address)
+  {
+    communicationType_ = CommunicationType.MULTICAST;
+    address_ = address;
   }
 
   public NetworkInterface getNetworkInterface()
@@ -192,13 +233,45 @@ public class Configuration
     System.out.printf("Use broadcast mode [%s]? ",
       config.isBroadcast() ? "Y/n" : "y/N");
     String useBroadcast = stdin.nextLine().trim();
-    if (!useBroadcast.isEmpty())
+    if (!useBroadcast.isEmpty() && useBroadcast.toLowerCase().startsWith("y"))
     {
-      config.setBroadcast(useBroadcast.toLowerCase().startsWith("y"));
+      config.setBroadcast();
     }
 
-    // Multicast address (if not broadcast mode)
-    if (!config.isBroadcast())
+    // Direct mode
+    System.out.printf("Use direct communcation mode [%s]? ",
+      config.isDirect() ? "Y/n" : "y/N");
+    String useDirect = stdin.nextLine().trim();
+    if (!useDirect.isEmpty() && useDirect.toLowerCase().startsWith("y"))
+    {
+      while (!validInput)
+      {
+        System.out.printf("Remote address [%s]: ", config.getAddress());
+        String remoteAddrString = stdin.nextLine().trim();
+        if (remoteAddrString.isEmpty())
+        {
+          validInput = true;  // Not necessary, but conveys intent.
+          break;
+        }
+
+        try
+        {
+          InetAddress address = InetAddress.getByName(remoteAddrString);
+          config.setAddress(address);
+          validInput = true;
+        }
+        catch (UnknownHostException ex)
+        {
+          // Shouldn't matter, but display a message anyway.
+          System.err.println("Unknown address: " + remoteAddrString);
+        }
+      }
+
+      validInput = false;
+    }
+
+    // Multicast address (if not broadcast or direct mode)
+    if (!config.isBroadcast() && !config.isDirect())
     {
       while (!validInput)
       {

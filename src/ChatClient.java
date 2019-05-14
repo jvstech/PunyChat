@@ -20,7 +20,7 @@ public class ChatClient
 {
   private ChatReceiver receiver_ = null;
   private ChatEntryReceived entryReceivedCallback_ = null;
-  private MulticastSocket receiverSocket_ = null;
+  private DatagramSocket receiverSocket_ = null;
   private DatagramSocket senderSocket_ = null;
   private InetAddress address_ = null;
   private int port_ = 0;
@@ -83,13 +83,23 @@ public class ChatClient
       receiverSocket_.close();
     }
 
-    receiverSocket_ = new MulticastSocket(port_);
-    if (config.isBoundToInterface())
+    if (config.isMulticast())
     {
-      receiverSocket_.setNetworkInterface(config.getNetworkInterface());
+      receiverSocket_ = new MulticastSocket(port_);
+      if (config.isBoundToInterface())
+      {
+        ((MulticastSocket)receiverSocket_).setNetworkInterface(
+          config.getNetworkInterface());
+      }
+
+      ((MulticastSocket)receiverSocket_).joinGroup(address_);
+    }
+    else
+    {
+      receiverSocket_ = new DatagramSocket(port_,
+        Configuration.GLOBAL_LISTEN_ADDRESS);
     }
 
-    receiverSocket_.joinGroup(address_);
 
     // Configure the receiver
     receiver_ = new ChatReceiver(entryReceivedCallback_, receiverSocket_);

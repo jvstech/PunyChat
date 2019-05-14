@@ -15,8 +15,10 @@ public class ConfigurationDialog extends JDialog
   private JPanel contentPanel;
   private JPanel buttonPanel;
   private JTextField userNameText;
-  private JTextField groupAddressText;
-  private JCheckBox broadcastCheckbox;
+  private JTextField addressText;
+  private JRadioButton multicastButton;
+  private JRadioButton directButton;
+  private JRadioButton broadcastButton;
   private JCheckBox bindNetInterfaceCheckbox;
   private JComboBox<NetworkInterface> netInterfaceText;
   private JTextField portText;
@@ -66,10 +68,10 @@ public class ConfigurationDialog extends JDialog
 
     // Multicast address label
     constraints.gridy++;
-    contentPanel.add(new JLabel("Multicast address: "), constraints);
+    contentPanel.add(new JLabel("Multicast/remote address: "), constraints);
 
     // Interface label
-    constraints.gridy += 3;   // skip two rows for checkboxes
+    constraints.gridy += 5;   // skip five rows for checkboxes
     contentPanel.add(new JLabel("Interface: "), constraints);
 
     // Port label
@@ -86,24 +88,52 @@ public class ConfigurationDialog extends JDialog
       new GeneralizedFilter(new MaxSizeFilterTest(18)));
     userNameText.setText(System.getProperty("user.name"));
 
-    // Multicast address text box
+    // Address text box
     constraints.gridy++;
-    contentPanel.add((groupAddressText = new JTextField(30)), constraints);
-    groupAddressText.setText("225.225.8.0");
-    groupAddressText.setInputVerifier(new AddressVerifier());
+    contentPanel.add((addressText = new JTextField(30)), constraints);
+    addressText.setText("225.225.8.0");
+    addressText.setInputVerifier(new AddressVerifier());
 
-    // Broadcast mode checkbox
+    // Multicast mode radio button
     constraints.gridy++;
-    contentPanel.add((broadcastCheckbox = new JCheckBox()), constraints);
-    broadcastCheckbox.setText("Broadcast mode");
-    broadcastCheckbox.addItemListener(new ItemListener()
+    contentPanel.add((multicastButton = new JRadioButton()), constraints);
+    multicastButton.setText("Multicast mode");
+    multicastButton.setSelected(true);
+    multicastButton.addItemListener(new ItemListener()
     {
       @Override
       public void itemStateChanged(ItemEvent e)
       {
-        groupAddressText.setEnabled(e.getStateChange() != ItemEvent.SELECTED);
+        bindNetInterfaceCheckbox.setEnabled(
+          e.getStateChange() == ItemEvent.SELECTED);
+        netInterfaceText.setEnabled(bindNetInterfaceCheckbox.isEnabled() &&
+          bindNetInterfaceCheckbox.isSelected());
       }
     });
+
+    // Direct mode radio button
+    constraints.gridy++;
+    contentPanel.add((directButton = new JRadioButton()), constraints);
+    directButton.setText("Direct mode");
+
+    // Broadcast mode radio button
+    constraints.gridy++;
+    contentPanel.add((broadcastButton = new JRadioButton()), constraints);
+    broadcastButton.setText("Broadcast mode");
+    broadcastButton.addItemListener(new ItemListener()
+    {
+      @Override
+      public void itemStateChanged(ItemEvent e)
+      {
+        addressText.setEnabled(e.getStateChange() != ItemEvent.SELECTED);
+      }
+    });
+
+    // Group the radio buttons together
+    ButtonGroup modeGroup = new ButtonGroup();
+    modeGroup.add(multicastButton);
+    modeGroup.add(directButton);
+    modeGroup.add(broadcastButton);
 
     // Bind network interface checkbox
     constraints.gridy++;
@@ -149,16 +179,16 @@ public class ConfigurationDialog extends JDialog
         configuration_ = new Configuration();
         configuration_.setUserName(userNameText.getText());
         configuration_.setPort(Integer.parseInt(portText.getText()));
-        if (broadcastCheckbox.isSelected())
+        if (broadcastButton.isSelected())
         {
-          configuration_.setBroadcast(true);
+          configuration_.setBroadcast();
         }
         else
         {
           try
           {
             configuration_.setAddress(InetAddress.getByName(
-              groupAddressText.getText()));
+              addressText.getText()));
           }
           catch (UnknownHostException ex)
           {
